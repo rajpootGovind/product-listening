@@ -10,10 +10,10 @@ const app = express();
 
 // Allow only our frontend(s) to call this API
 const origins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map((s) => s.trim()) : true;
-app.use(cors({ origin: origins  }));
+app.use(cors({ origin: origins }));
 app.use(express.json());
 
-app.get('/', (req, res) => res.json({ ok: true, name: 'Man Stack Marketplace API' }));
+app.get('/', (req, res) => res.json({ ok: true, name: 'Go shop API' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);

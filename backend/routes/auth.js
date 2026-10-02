@@ -12,9 +12,12 @@ const publicUser = (u) => ({ id: u._id, name: u.name, email: u.email, role: u.ro
 // Vendor sign up (admins are created by the seed script)
 router.post('/register', async (req, res) => {
   const { name, email, password, shopName } = req.body;
-  if (!name || !email || !password || !shopName) return res.status(400).json({ message: 'Please fill all fields' });
-  if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
-  if (await User.findOne({ email: email.toLowerCase() })) return res.status(400).json({ message: 'This email is already used' });
+  const bad = (field, message, code = 400) => res.status(code).json({ field, message });
+  if (!name?.trim()) return bad('name', 'Please enter your full name');
+  if (!shopName?.trim()) return bad('shopName', 'Please enter your shop name');
+  if (!/^\S+@\S+\.\S+$/.test(email || '')) return bad('email', 'Enter a valid email, like name@example.com');
+  if (!password || password.length < 6) return bad('password', 'Password must be at least 6 characters');
+  if (await User.findOne({ email: email.toLowerCase() })) return bad('email', 'An account with this email already exists. Try logging in.', 409);
 
   const user = await User.create({ name, email, shopName, password: await bcrypt.hash(password, 10), role: 'vendor' });
   res.status(201).json({ token: makeToken(user), user: publicUser(user) });
@@ -22,11 +25,12 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email: (email || '').toLowerCase() });
-  if (!user || !(await bcrypt.compare(password || '', user.password))) {
-    return res.status(400).json({ message: 'Wrong email or password' });
-  }
-  if (user.status === 'blocked') return res.status(403).json({ message: 'Your account is blocked' });
+  if (!email) return res.status(400).json({ field: 'email', message: 'Please enter your email address' });
+  if (!password) return res.status(400).json({ field: 'password', message: 'Please enter your password' });
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) return res.status(404).json({ field: 'email', message: 'No account found with this email. Please sign up first.' });
+  if (!(await bcrypt.compare(password, user.password))) return res.status(401).json({ field: 'password', message: 'Incorrect password. Please try again.' });
+  if (user.status === 'blocked') return res.status(403).json({ message: 'Your account is blocked. Please contact support.' });
   res.json({ token: makeToken(user), user: publicUser(user) });
 });
 

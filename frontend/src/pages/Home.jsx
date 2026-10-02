@@ -1,62 +1,78 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
+import { useUi } from '../Ui';
 import ProductCard from '../components/ProductCard';
-import Img from '../components/Img';
+import I3, { catIcon } from '../components/Icons3D';
+
+const perks = [['truck', 'Free delivery', 'On orders above ₹499'], ['return', 'Easy returns', '7-day hassle-free'], ['shield', 'Secure & trusted', 'Verified sellers only'], ['headset', '24×7 support', "We're always here"]];
 
 export default function Home() {
+  const { openAuth, toast } = useUi();
+  const [params] = useSearchParams();
+  const search = params.get('q') || '';
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
+  const [sort, setSort] = useState('new');
 
   useEffect(() => {
-    api('/products').then(setProducts).finally(() => setLoading(false));
+    api('/products').then(setProducts).catch((e) => toast(e.message, 'bad')).finally(() => setLoading(false));
   }, []);
 
-  const categories = ['All', ...new Set(products.map((p) => p.category))];
-  const shown = products.filter(
-    (p) =>
-      (category === 'All' || p.category === category) &&
-      (p.title + p.description + (p.vendor?.shopName || '')).toLowerCase().includes(search.toLowerCase())
-  );
+  const cats = ['All', ...new Set(products.map((p) => p.category))];
+  const shown = products
+    .filter((p) => (category === 'All' || p.category === category) && (p.title + p.description + p.category + (p.vendor?.shopName || '')).toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => (sort === 'low' ? a.price - b.price : sort === 'high' ? b.price - a.price : 0));
 
   return (
     <main>
       <section className="hero">
-        <div className="hero-text">
-          <h1>Good things, made by people you can trust.</h1>
-          <p>Browse products from independent vendors. Every shop is checked and approved by our team.</p>
-          <input className="search" placeholder="Search products or shops" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <div className="hero-links">
-            <span>{products.length} products live</span>
-            <Link to="/register">Open your shop</Link>
+        <div className="hero-in">
+          <div className="hero-text">
+            <span className="tagline"><I3 n="bolt" s={22} />Big savings, every day</span>
+            <h1>Shop smart with <span>Go shop</span></h1>
+            <p>Discover handpicked products from verified sellers across India — delivered fast, priced right.</p>
+            <div className="hero-cta">
+              <a className="btn" href="#products">Shop now</a>
+              <button className="btn ghost-w" onClick={() => openAuth('register')}>Start selling</button>
+            </div>
+          </div>
+          <div className="hero-art" aria-hidden="true">
+            <I3 n="bag" s={150} className="f1" /><I3 n="gift" s={84} className="f2" /><I3 n="tag" s={72} className="f3" /><I3 n="heart" s={60} className="f4" />
           </div>
         </div>
-        <div className="stack" aria-hidden="true">
-          {products.slice(0, 3).map((p, i) => (
-            <div key={p._id} className={`stack-card s${i}`}>
-              <Img src={p.image} alt={p.title} />
-            </div>
-          ))}
-        </div>
       </section>
 
-      <section className="wrap">
-        <div className="chips">
-          {categories.map((c) => (
-            <button key={c} className={`pill ${c === category ? 'on' : ''}`} onClick={() => setCategory(c)}>{c}</button>
-          ))}
-        </div>
+      <div className="wrap">
+        <section className="perks">
+          {perks.map(([i, t, d]) => <div key={t}><I3 n={i} s={46} /><span><b>{t}</b><small>{d}</small></span></div>)}
+        </section>
 
-        {loading ? (
-          <p className="center">Loading products…</p>
-        ) : shown.length === 0 ? (
-          <p className="empty">No products match your search. Try a different word or category.</p>
-        ) : (
-          <div className="grid">{shown.map((p) => <ProductCard key={p._id} p={p} />)}</div>
-        )}
-      </section>
+        <section className="cats" aria-label="Categories">
+          {cats.map((c) => (
+            <button key={c} className={c === category ? 'on' : ''} onClick={() => setCategory(c)}>
+              <I3 n={c === 'All' ? 'bag' : catIcon(c)} s={52} /><span>{c}</span>
+            </button>
+          ))}
+        </section>
+
+        <section id="products">
+          <div className="sec-h">
+            <h2>{search ? `Results for “${search}”` : category === 'All' ? 'Trending products' : category} <small>{shown.length} items</small></h2>
+            <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
+              <option value="new">Newest first</option><option value="low">Price: Low to High</option><option value="high">Price: High to Low</option>
+            </select>
+          </div>
+          {loading ? (
+            <div className="grid">{Array.from({ length: 8 }, (_, i) => <div key={i} className="card sk"><div className="card-img" /><div className="card-body"><i /><i /><i /></div></div>)}</div>
+          ) : shown.length === 0 ? (
+            <div className="empty"><I3 n="search" s={56} /><h3>No products found</h3><p>Try a different keyword or category.</p></div>
+          ) : (
+            <div className="grid">{shown.map((p, i) => <ProductCard key={p._id} p={p} i={i} />)}</div>
+          )}
+        </section>
+      </div>
     </main>
   );
 }
