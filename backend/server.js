@@ -9,8 +9,19 @@ import adminRoutes from './routes/admin.js';
 const app = express();
 
 // Allow only our frontend(s) to call this API
-const origins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map((s) => s.trim()) : true;
-app.use(cors({ origin: origins  }));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://product-listening.vercel.app'
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 app.get('/', (req, res) => res.json({ ok: true, name: 'Man Stack Marketplace API' }));
